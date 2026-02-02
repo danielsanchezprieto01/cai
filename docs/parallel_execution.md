@@ -9,19 +9,20 @@ This comprehensive guide covers all aspects of parallel execution, multi-agent c
 1. [Overview](#overview)
 2. [Parallelization Approaches](#parallelization-approaches)
 3. [CLI Parallel Execution (CAI_PARALLEL)](#cli-parallel-execution-cai_parallel)
-4. [TUI Multi-Terminal Workflows](#tui-multi-terminal-workflows)
-5. [Preconfigured Teams](#preconfigured-teams)
-6. [Parallel Execution Patterns](#parallel-execution-patterns)
-7. [Context Management Strategies](#context-management-strategies)
-8. [Agentic Patterns for Coordination](#agentic-patterns-for-coordination)
-9. [Queue Management](#queue-management)
-10. [Terminal-Specific Commands](#terminal-specific-commands)
-11. [Layout and UI Considerations](#layout-and-ui-considerations)
-12. [Best Practices and Optimization](#best-practices-and-optimization)
-13. [Cost Management in Parallel Workflows](#cost-management-in-parallel-workflows)
-14. [Advanced Coordination Patterns](#advanced-coordination-patterns)
-15. [Troubleshooting](#troubleshooting)
-16. [Real-World Use Cases](#real-world-use-cases)
+4. [CLI Parallel Agents (YAML Configuration)](#cli-parallel-agents-yaml-configuration)
+5. [TUI Multi-Terminal Workflows](#tui-multi-terminal-workflows)
+6. [Preconfigured Teams](#preconfigured-teams)
+7. [Parallel Execution Patterns](#parallel-execution-patterns)
+8. [Context Management Strategies](#context-management-strategies)
+9. [Agentic Patterns for Coordination](#agentic-patterns-for-coordination)
+10. [Queue Management](#queue-management)
+11. [Terminal-Specific Commands](#terminal-specific-commands)
+12. [Layout and UI Considerations](#layout-and-ui-considerations)
+13. [Best Practices and Optimization](#best-practices-and-optimization)
+14. [Cost Management in Parallel Workflows](#cost-management-in-parallel-workflows)
+15. [Advanced Coordination Patterns](#advanced-coordination-patterns)
+16. [Troubleshooting](#troubleshooting)
+17. [Real-World Use Cases](#real-world-use-cases)
 
 ---
 
@@ -117,12 +118,12 @@ CAI_PARALLEL="3" CAI_MODEL="alias1" cai --prompt "Scan target.com for OWASP Top 
 #### Example 2: High-Throughput Bug Hunting
 
 ```bash
-# Run 5 fast agents for rapid bug discovery
-CAI_PARALLEL="5" CAI_MODEL="alias0-fast" CAI_BRIEF="true" cai
+# Run 5 agents for rapid bug discovery
+CAI_PARALLEL="5" CAI_MODEL="alias1" CAI_BRIEF="true" cai
 ```
 
 **Optimization tips**:
-- Use faster models (`alias0-fast`) for higher parallelization
+- Use `alias1` model for parallelization
 - Enable `CAI_BRIEF="true"` for concise outputs
 - Set `CAI_STREAM="false"` to reduce overhead
 
@@ -178,6 +179,205 @@ cai --prompt "Enumerate attack vectors on API endpoints"
 2. **No Inter-Agent Communication**: Instances cannot share findings
 3. **No TUI Support**: `CAI_PARALLEL` is CLI-only (TUI has built-in Teams)
 4. **Shared Model**: All instances use the same model configuration
+
+> **Note**: For running different agents simultaneously, use YAML parallel agents configuration (see next section).
+
+---
+
+## CLI Parallel Agents (YAML Configuration)
+
+### Overview
+
+In addition to `CAI_PARALLEL` for running multiple instances of the **same agent**, CAI supports running **different agents** simultaneously via YAML configuration files.
+
+**Key Differences:**
+
+| Feature | CAI_PARALLEL | YAML Parallel Agents |
+|---------|--------------|----------------------|
+| **Agent Types** | Same agent × N | Different agents |
+| **Configuration** | Environment variable | YAML file |
+| **Prompts** | Same for all | Different per agent |
+| **Models** | Same for all | Configurable per agent |
+| **Use Case** | Swarm execution, batch | Multi-perspective workflows |
+
+### Quick Start
+
+#### 1. Create Configuration File
+
+Create a YAML file defining your parallel agents:
+
+```yaml
+# my_agents.yaml
+parallel_agents:
+  - name: redteam_agent
+    model: alias1
+    prompt: "Find vulnerabilities in target.com"
+    description: "Offensive security testing"
+    auto_run: true
+  
+  - name: blueteam_agent
+    model: alias1
+    prompt: "Analyze defensive posture of target.com"
+    description: "Defensive analysis"
+    auto_run: true
+```
+
+#### 2. Execute
+
+```bash
+cai --yaml my_agents.yaml
+```
+
+**What happens:**
+- Both agents load automatically
+- Each executes its configured prompt in parallel
+- Results stream to the terminal
+- Each agent maintains independent context
+
+#### 3. Manage in Session
+
+```bash
+# Check loaded agents
+/parallel list
+
+# View environment variables
+/env | grep PARALLEL
+
+# Merge agent histories
+/parallel merge
+
+# Check costs
+/cost
+```
+
+### Common Patterns
+
+#### Pattern 1: Multi-Perspective Analysis
+
+```yaml
+# multi_perspective.yaml
+parallel_agents:
+  - name: redteam_agent
+    prompt: "Identify attack vectors for webapp.com"
+  
+  - name: blueteam_agent
+    prompt: "Analyze defenses for webapp.com"
+  
+  - name: bug_bounter_agent
+    prompt: "Find bug bounty targets in webapp.com"
+```
+
+#### Pattern 2: Distributed Workload
+
+```yaml
+# distributed_scan.yaml
+parallel_agents:
+  - name: redteam_agent
+    prompt: "Scan subdomains A-M of target.com"
+  
+  - name: redteam_agent
+    prompt: "Scan subdomains N-Z of target.com"
+  
+  - name: network_security_analyzer_agent
+    prompt: "Analyze discovered hosts for services"
+```
+
+#### Pattern 3: Model Comparison
+
+```yaml
+# model_comparison.yaml
+parallel_agents:
+  - name: redteam_agent
+    model: alias1
+    prompt: "Find SQL injection vulnerabilities"
+  
+  - name: bug_bounter_agent
+    model: alias1
+    prompt: "Validate SQL injection findings"
+```
+
+### Advanced Features
+
+#### Shared Configuration
+
+Define common settings across all agents:
+
+```yaml
+shared:
+  model: alias1
+  auto_run: true
+
+parallel_agents:
+  - name: redteam_agent
+    prompt: "Test security"
+  
+  - name: blueteam_agent
+    prompt: "Review defenses"
+    model: alias1  # Override shared model
+```
+
+#### Environment Variables Per Agent
+
+```yaml
+parallel_agents:
+  - name: blueteam_agent
+    prompt: "Defend container"
+    env:
+      CTF_INSIDE: "true"
+      DEFENSIVE_MODE: enabled
+  
+  - name: redteam_agent
+    prompt: "Attack container"
+    env:
+      CTF_INSIDE: "false"
+      AGGRESSIVE_SCAN: "true"
+```
+
+#### Unified Context Mode
+
+Share conversation history between agents (CLI only):
+
+```yaml
+parallel_agents:
+  - name: redteam_agent
+    prompt: "Find vulnerabilities"
+    unified_context: true
+  
+  - name: bug_bounter_agent
+    prompt: "Validate findings from previous analysis"
+    unified_context: true  # Sees redteam's work
+```
+
+### Available Fields
+
+| Field | Required | Type | Default | Description |
+|-------|----------|------|---------|-------------|
+| `name` | ✅ Yes | string | - | Agent type to instantiate |
+| `model` | ❌ No | string | Global | Model override |
+| `prompt` | ❌ No | string | None | Initial prompt to execute |
+| `description` | ❌ No | string | None | Human-readable description |
+| `auto_run` | ❌ No | boolean | `true` | Auto-execute on startup |
+| `unified_context` | ❌ No | boolean | `false` | Share history (CLI only) |
+| `team` | ❌ No | string | None | Team label (TUI only) |
+| `env` | ❌ No | object | `{}` | Environment variables |
+
+### Cost Management
+
+```bash
+# Set cost limit
+CAI_PRICE_LIMIT=5.0 cai --yaml agents.yaml
+
+# Monitor costs
+/cost  # Check total cost
+```
+
+### Detailed Documentation
+
+For complete YAML syntax, field reference, troubleshooting, and advanced examples:
+
+- **[YAML Format Reference](parallel-agents-yaml-format.md)** - Complete specification
+- **[CLI Usage Guide](parallel-agents-cli-usage.md)** - Detailed workflows
+- **[Quick Reference](parallel-agents-quick-reference.md)** - Syntax cheat sheet
 
 ---
 
@@ -757,17 +957,21 @@ T2> /load t1_recon.json
 T2> Based on the loaded reconnaissance, identify vulnerabilities
 ```
 
-**Method 3: Merge Command (CLI Parallel Mode)**
+**Method 3: Merge Command (YAML Parallel Agents)**
 ```bash
-# In CLI with CAI_PARALLEL
-/parallel create agent1 --model gpt-4
-/parallel create agent2 --model claude-3
+# Create YAML configuration file (agents.yaml):
+# parallel_agents:
+#   - name: redteam_agent
+#     model: alias1
+#     prompt: "Analyze security of target.com from offensive perspective"
+#   - name: blueteam_agent
+#     model: alias1
+#     prompt: "Analyze security of target.com from defensive perspective"
 
-/run queue agent1 "Analyze security of target.com"
-/run queue agent2 "Analyze security of target.com"
-/run execute
+# Load and execute
+cai --yaml agents.yaml
 
-# Merge results
+# Inside session, merge results
 /merge  # Combines both agents' findings into unified view
 ```
 
@@ -1248,7 +1452,7 @@ T3:/agent bug_bounter_agent        # Switch T3 to bug bounty
 
 # Model changes
 T1:/model alias1                   # Change T1 model
-T4:/model gpt-4o                   # Change T4 model
+T4:/model alias1                   # Change T4 model
 
 # Session management
 T2:/save t2_session.json           # Save T2's session
@@ -1284,7 +1488,7 @@ T4:Generate progress report
 
 # Model changes
 /model alias1 t1                   # Change T1 model
-/model gpt-4o t4                   # Change T4 model
+/model alias1 t4                   # Change T4 model
 
 # Session management
 /save t2_session.json t2           # Save T2's session
@@ -1629,11 +1833,11 @@ T4> [REPORT] Document all findings
 
 | Task Type | Recommended Model | Rationale |
 |-----------|------------------|-----------|
-| Reconnaissance | `alias0-fast`, `alias1` | Fast, cheap, sufficient for enumeration |
+| Reconnaissance | `alias1` | Sufficient for enumeration |
 | Exploitation | `alias1` | Powerful reasoning for complex exploits |
 | Validation | `alias1` | Fast confirmation, cost-effective |
-| Documentation | `alias1`, `gpt-4o` | Quality writing, structured output |
-| Analysis | `alias1`, `claude-3.5-sonnet` | Deep reasoning capabilities |
+| Documentation | `alias1` | Quality writing, structured output |
+| Analysis | `alias1` | Deep reasoning capabilities |
 
 **Token Management**:
 
@@ -1729,12 +1933,10 @@ CAI_PRICE_LIMIT="5.0"      # Stop at $5
 
 **2. Use Cost-Effective Models**
 ```bash
-# Reconnaissance with fast models
-T1: /model alias0-fast    # Cheapest option
-T2: /model alias0-fast
-
-# Exploitation with powerful models
-T3: /model alias1         # More expensive, but necessary
+# Configure all terminals with alias1
+T1: /model alias1
+T2: /model alias1
+T3: /model alias1
 T4: /model alias1
 ```
 
@@ -2029,9 +2231,9 @@ T4:command
 2. **Check All Terminals**: Run `/cost all` to see breakdown
 3. **Optimize Models**:
 ```bash
-# Switch expensive terminals to cheaper models
-T1:/model alias0-fast
-T2:/model alias0-fast
+# Ensure all terminals use alias1
+T1:/model alias1
+T2:/model alias1
 ```
 4. **Reduce Parallelization**: Close unnecessary terminals with `Ctrl+E`
 5. **Set Lower Limit**: Reduce `CAI_PRICE_LIMIT` for tighter control
